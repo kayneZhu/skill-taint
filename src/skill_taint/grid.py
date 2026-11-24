@@ -399,6 +399,7 @@ def _episode_dict(*, episode: object) -> dict[str, object]:
         "reflection_status": episode.reflection_status,
         "rejected_bodies": list(episode.rejected_bodies),
         "sends": list(episode.effects.sends),
+        "content_filtered": episode.content_filtered,
         "step_limit_hit": episode.step_limit_hit,
         "steps": [
             {

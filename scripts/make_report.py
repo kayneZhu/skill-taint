@@ -289,7 +289,10 @@ def _report(*, aggregate: dict[str, object], summaries: list[dict[str, object]])
         f"Ledger spend: {_money(value=aggregate.get('ledger_spent_usd'))} USD. "
         f"Sum of per-campaign summary costs: {_money(value=aggregate.get('summary_cost_usd'))} USD. "
         "The ledger is the spend record. It is larger than the summary sum when a replaced probe "
-        "attempt was billed and is not in the final summary.",
+        "attempt was billed and is not in the final summary. "
+        "A content-filter response that omits usage is entered as `content_filter_reserve`: "
+        "an upper bound of 8,000 prompt tokens plus that request's max_tokens at the catalog price, "
+        "not a measured bill.",
         "",
         f"Prompt tokens: {aggregate.get('prompt_tokens')}. "
         f"Completion tokens: {aggregate.get('completion_tokens')}. "

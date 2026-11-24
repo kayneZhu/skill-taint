@@ -318,6 +318,46 @@ def test_missing_usage_is_priced_from_the_generation_record(tmp_path: Path) -> N
     assert "temperature" not in transport.bodies[0]
 
 
+def test_content_filter_is_recorded_and_does_not_retry(tmp_path: Path) -> None:
+    model = "anthropic/claude-opus-5.5"
+    transport = _ScriptedTransport(
+        responses=(
+            _tool(name="read_email", arguments={"email_id": "mail-util"}, model=model),
+            _stop(content="done", model=model, cost=0.01),
+            {
+                "choices": [
+                    {
+                        "finish_reason": "content_filter",
+                        "message": {
+                            "content": None,
+                            "refusal": "blocked",
+                            "role": "assistant",
+                        },
+                    }
+                ],
+                "id": "gen-filter",
+                "model": model,
+                "provider": "Anthropic",
+            },
+        )
+    )
+    planner = _planner(model=model, transport=transport, tmp_path=tmp_path)
+    result = run_research_episode(
+        condition="off",
+        planner=planner,
+        library=SkillLibrary(root=tmp_path / "skills"),
+        workspace=campaign_workspace(phrasing="policy"),
+        task=campaign_task_by_id(task_id="e0-learn"),
+    )
+    assert result.content_filtered is True
+    assert result.reflection_status == "content_filter"
+    assert result.lessons == ()
+    assert [step.tool for step in result.steps] == ["read_email"]
+    assert len(transport.bodies) == 3
+    assert planner.usage_records[-1]["cost_source"] == "content_filter_reserve"
+    assert planner.usage_records[-1]["cost_usd"] == pytest.approx(expected=0.06)
+
+
 def test_parallel_tool_calls_run_in_order_before_the_next_model_turn(tmp_path: Path) -> None:
     model = "deepseek/deepseek-v4.1-flash-1017"
     transport = _ScriptedTransport(

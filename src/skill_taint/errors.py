@@ -136,6 +136,10 @@ class EmptyLengthError(SkillIntegrityError):
     """finish_reason was length and the visible content was empty."""
 
 
+class ContentFiltered(SkillIntegrityError):
+    """The provider returned finish_reason content_filter."""
+
+
 class IncompleteModelCall(SkillIntegrityError):
     """A model call failed twice with the same request."""
 

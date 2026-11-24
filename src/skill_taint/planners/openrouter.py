@@ -20,6 +20,7 @@ from pathlib import Path
 from skill_taint.errors import (
     ConfigError,
     EmptyLengthError,
+    ContentFiltered,
     IncompleteModelCall,
     MissingConfigError,
     PlannerStateError,
@@ -70,6 +71,7 @@ _FINISH = {
     "tool_use": "tool_calls",
     "length": "length",
     "max_tokens": "length",
+    "content_filter": "content_filter",
 }
 
 
@@ -162,6 +164,27 @@ def build_request(
     if "models" in body:
         raise ConfigError("request must not set models")
     return body
+
+
+def reserve_cost(*, model: str, max_tokens: int) -> float:
+    if model not in CATALOG:
+        raise UntrackedCostError(f"no catalog price for {model}")
+    if max_tokens <= 0:
+        raise ConfigError("max_tokens must be positive")
+    spec = CATALOG[model]
+    prompt_tokens = 8000
+    return (prompt_tokens / 1_000_000) * spec.input_per_million + (
+        max_tokens / 1_000_000
+    ) * spec.output_per_million
+
+
+def _finish_of(*, payload: Mapping[str, object]) -> str | None:
+    choices = payload.get("choices")
+    if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+        finish = choices[0].get("finish_reason")
+        if isinstance(finish, str):
+            return finish.lower()
+    return None
 
 
 def describe_payload(*, payload: object) -> str:
@@ -321,6 +344,15 @@ def parse_openrouter_turn(*, payload: Mapping[str, object]) -> OpenRouterTurn:
         raise UnexpectedModelOutputError("truncated tool call")
     if finish == "length":
         finish = "stop"
+    if finish == "content_filter":
+        return OpenRouterTurn(
+            content=None,
+            calls=(),
+            message=message,
+            finish_reason="content_filter",
+            returned_model=returned,
+            provider=provider,
+        )
     if not calls and finish != "stop":
         raise UnexpectedModelOutputError(f"finish_reason {finish} had no tool call")
     return OpenRouterTurn(
@@ -500,6 +532,8 @@ class OpenRouterPlanner:
         )
         if not isinstance(turn, OpenRouterTurn):
             raise ConfigError("planning request returned skill bodies")
+        if turn.finish_reason == "content_filter":
+            raise ContentFiltered("provider content_filter")
         self._messages.append(turn.message)
         if not turn.calls:
             self._finished = True
@@ -619,6 +653,8 @@ class OpenRouterPlanner:
         turn = parse_openrouter_turn(payload=payload)
         if accept_turn:
             return turn
+        if turn.finish_reason == "content_filter":
+            raise ContentFiltered("provider content_filter")
         if turn.calls:
             raise UnexpectedModelOutputError("reflection returned a tool call")
         if not isinstance(turn.content, str) or turn.content.strip() == "":
@@ -706,6 +742,25 @@ class OpenRouterPlanner:
             "request_model": self._model,
             "returned_model": returned if isinstance(returned, str) else None,
         }
+        finish = _finish_of(payload=payload)
+        if not isinstance(usage, dict) and finish == "content_filter":
+            max_tokens = (
+                self._reflection_max_tokens if phase == "reflect" else self._planning_max_tokens
+            )
+            cost = reserve_cost(model=self._model, max_tokens=max_tokens)
+            record = {
+                **base,
+                "completion_tokens": None,
+                "cost_source": "content_filter_reserve",
+                "prompt_tokens": None,
+                "reasoning_tokens": None,
+            }
+            self._ledger.charge(record=record, cost_usd=cost)
+            stored = dict(record)
+            stored["cost_usd"] = cost
+            self.usage_records.append(stored)
+            self._append_raw(payload=payload, record=stored)
+            return
         if not isinstance(usage, dict):
             generation_id = payload.get("id")
             if isinstance(generation_id, str) and generation_id != "":

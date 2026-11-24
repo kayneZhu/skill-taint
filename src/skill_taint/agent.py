@@ -12,6 +12,7 @@ from typing import Protocol
 from skill_taint.binding import bind_arguments
 from skill_taint.errors import (
     ConfigError,
+    ContentFiltered,
     IncompleteModelCall,
     InvalidAddressError,
     InvalidArgumentError,
@@ -283,6 +284,7 @@ class ResearchEpisodeResult:
     steps: tuple[ToolStep, ...]
     step_limit_hit: bool
     reflection_status: str
+    content_filtered: bool
     rejected_bodies: tuple[str, ...]
     conflict_bodies: tuple[str, ...]
 
@@ -345,11 +347,16 @@ def run_research_episode(
     planner.reset(task=task, loaded_skills=loaded, spotlight=spotlight)
     steps: list[ToolStep] = []
     step_limit_hit = False
+    content_filtered = False
     while True:
         if len(steps) >= RESEARCH_MAX_TOOL_STEPS:
             step_limit_hit = True
             break
-        issued = planner.next_call()
+        try:
+            issued = planner.next_call()
+        except ContentFiltered:
+            content_filtered = True
+            break
         if issued is None:
             break
         try:
@@ -403,7 +410,7 @@ def run_research_episode(
     stored: list[Skill] = []
     reflection_status = "skipped"
     if task.reflect:
-        stored = _reflect_and_store(
+        stored, filtered = _reflect_and_store(
             condition=condition,
             planner=planner,
             library=library,
@@ -412,7 +419,8 @@ def run_research_episode(
             rejected=rejected,
             conflicts=conflicts,
         )
-        reflection_status = "stored"
+        content_filtered = content_filtered or filtered
+        reflection_status = "content_filter" if filtered else "stored"
     return ResearchEpisodeResult(
         task_id=task.task_id,
         effects=workspace.effects_for(episode_id=task.task_id),
@@ -421,6 +429,7 @@ def run_research_episode(
         steps=tuple(steps),
         step_limit_hit=step_limit_hit,
         reflection_status=reflection_status,
+        content_filtered=content_filtered,
         rejected_bodies=tuple(rejected),
         conflict_bodies=tuple(conflicts),
     )
@@ -513,7 +522,8 @@ def _reflect_and_store(
     task_id: str,
     rejected: list[str],
     conflicts: list[str],
-) -> list[Skill]:
+) -> tuple[list[Skill], bool]:
+    filtered = False
     if condition == "quarantine":
         trusted_view = partition_trajectory(trajectory=trajectory, label=Integrity.TRUSTED)
         untrusted_view = partition_trajectory(
@@ -522,20 +532,28 @@ def _reflect_and_store(
         )
         if not trusted_view.segments:
             raise ConfigError("trusted partition is empty")
-        trusted_bodies = planner.reflect(
-            transcript=render_research_transcript(trajectory=trusted_view, spotlight=False),
-            partition=PARTITION_TRUSTED,
-            spotlight=False,
-        )
-        if untrusted_view.segments:
-            untrusted_bodies = planner.reflect(
-                transcript=render_research_transcript(
-                    trajectory=untrusted_view,
-                    spotlight=False,
-                ),
-                partition=PARTITION_UNTRUSTED,
+        try:
+            trusted_bodies = planner.reflect(
+                transcript=render_research_transcript(trajectory=trusted_view, spotlight=False),
+                partition=PARTITION_TRUSTED,
                 spotlight=False,
             )
+        except ContentFiltered:
+            filtered = True
+            trusted_bodies = ()
+        if untrusted_view.segments:
+            try:
+                untrusted_bodies = planner.reflect(
+                    transcript=render_research_transcript(
+                        trajectory=untrusted_view,
+                        spotlight=False,
+                    ),
+                    partition=PARTITION_UNTRUSTED,
+                    spotlight=False,
+                )
+            except ContentFiltered:
+                filtered = True
+                untrusted_bodies = ()
         else:
             untrusted_bodies = ()
         labeled = merge_partition_bodies(
@@ -563,15 +581,17 @@ def _reflect_and_store(
             )
             if skill is not None:
                 stored.append(skill)
-        return stored
+        return stored, filtered
     spotlight = condition == "spotlight"
-    bodies = _unique(
-        bodies=planner.reflect(
+    try:
+        reflected = planner.reflect(
             transcript=render_research_transcript(trajectory=trajectory, spotlight=spotlight),
             partition=PARTITION_ALL,
             spotlight=spotlight,
         )
-    )
+    except ContentFiltered:
+        return [], True
+    bodies = _unique(bodies=reflected)
     derived_from = tuple(segment.segment_id for segment in trajectory.segments)
     stored = []
     for body in bodies:
@@ -590,7 +610,7 @@ def _reflect_and_store(
         )
         if skill is not None:
             stored.append(skill)
-    return stored
+    return stored, False
 
 
 def _store_body(
