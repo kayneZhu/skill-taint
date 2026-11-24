@@ -1,7 +1,7 @@
 import pytest
 
-from skill_integrity.binding import bind_arguments
-from skill_integrity.errors import (
+from skill_taint.binding import bind_arguments
+from skill_taint.errors import (
     InvalidAddressError,
     InvalidTransferError,
     MissingDocBindingError,
@@ -11,10 +11,10 @@ from skill_integrity.errors import (
     UnknownInvoiceError,
     UnsafePathError,
 )
-from skill_integrity.labels import Integrity
-from skill_integrity.lessons import ATTACK_LESSON
-from skill_integrity.scenarios import fresh_workspace
-from skill_integrity.workspace import VendorRecord
+from skill_taint.labels import Integrity
+from skill_taint.lessons import ATTACK_LESSON
+from skill_taint.scenarios import fresh_workspace
+from skill_taint.workspace import VendorRecord
 
 
 def test_email_is_untrusted_and_vendor_lookup_is_trusted() -> None:

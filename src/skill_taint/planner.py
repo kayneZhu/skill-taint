@@ -3,11 +3,11 @@
 from collections.abc import Sequence
 from typing import Protocol
 
-from skill_integrity.reflection import LessonProposal
-from skill_integrity.scenarios import Task
-from skill_integrity.skills import Skill
-from skill_integrity.tools import PlannedToolCall
-from skill_integrity.trace import Trajectory
+from skill_taint.reflection import LessonProposal
+from skill_taint.scenarios import Task
+from skill_taint.skills import Skill
+from skill_taint.tools import PlannedToolCall
+from skill_taint.trace import Trajectory
 
 
 class EpisodePlanner(Protocol):

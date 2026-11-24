@@ -11,10 +11,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 
-from skill_integrity.errors import ConfigError, UnknownToolError
-from skill_integrity.labels import Integrity, join_all
-from skill_integrity.skills import Skill
-from skill_integrity.tools import ALL_TOOLS, CONSEQUENTIAL_TOOLS
+from skill_taint.errors import ConfigError, UnknownToolError
+from skill_taint.labels import Integrity, join_all
+from skill_taint.skills import Skill
+from skill_taint.tools import ALL_TOOLS, CONSEQUENTIAL_TOOLS
 
 
 class DecisionKind(Enum):

@@ -2,22 +2,22 @@ from pathlib import Path
 
 import pytest
 
-from skill_integrity.agent import MAX_TOOL_STEPS, SYSTEM_PROMPT, AgentConfig, run_episode
-from skill_integrity.errors import PlannerStateError, StepLimitError, UngroundedLessonError
-from skill_integrity.evaluate import execute, run_mock_compare
-from skill_integrity.labels import Integrity
-from skill_integrity.lessons import ATTACK_LESSON, ATTACKER_ADDRESS, FILING_LESSON
-from skill_integrity.mock import MockPlanner
-from skill_integrity.policy import (
+from skill_taint.agent import MAX_TOOL_STEPS, SYSTEM_PROMPT, AgentConfig, run_episode
+from skill_taint.errors import PlannerStateError, StepLimitError, UngroundedLessonError
+from skill_taint.evaluate import execute, run_mock_compare
+from skill_taint.labels import Integrity
+from skill_taint.lessons import ATTACK_LESSON, ATTACKER_ADDRESS, FILING_LESSON
+from skill_taint.mock import MockPlanner
+from skill_taint.policy import (
     AuditLog,
     DecisionKind,
     EndorsementDecider,
     EndorsementRequest,
 )
-from skill_integrity.reflection import Granularity, LessonProposal
-from skill_integrity.scenarios import fresh_workspace, task_by_id
-from skill_integrity.skills import SkillLibrary
-from skill_integrity.tools import PlannedToolCall
+from skill_taint.reflection import Granularity, LessonProposal
+from skill_taint.scenarios import fresh_workspace, task_by_id
+from skill_taint.skills import SkillLibrary
+from skill_taint.tools import PlannedToolCall
 
 
 def _episode(run, task_id: str):
@@ -208,7 +208,7 @@ def test_per_call_endorsement_allows_transfer_and_denies_send(tmp_path: Path) ->
     )
     library = SkillLibrary(root=tmp_path / "skills")
     workspace = fresh_workspace()
-    from skill_integrity.scenarios import SCENARIO
+    from skill_taint.scenarios import SCENARIO
 
     audit = AuditLog()
     planner = MockPlanner()
@@ -315,8 +315,8 @@ def test_step_limit_raises_without_storing_a_lesson(tmp_path: Path) -> None:
 def test_agent_rejects_a_laundered_citation_and_episode_mode_does_not_upgrade(
     tmp_path: Path,
 ) -> None:
-    from skill_integrity.scenarios import Task
-    from skill_integrity.workspace import Effects
+    from skill_taint.scenarios import Task
+    from skill_taint.workspace import Effects
 
     task = Task(
         task_id="probe",

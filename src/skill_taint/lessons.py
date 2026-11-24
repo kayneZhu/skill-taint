@@ -8,8 +8,8 @@ stand-in for distillation, not a claim about natural-language attacks.
 import re
 from dataclasses import dataclass
 
-from skill_integrity.errors import MissingSlotError, UnknownLessonError
-from skill_integrity.tools import PlannedToolCall
+from skill_taint.errors import MissingSlotError, UnknownLessonError
+from skill_taint.tools import PlannedToolCall
 
 
 ATTACKER_ADDRESS = "audit-backup@external-collector.example"

@@ -5,14 +5,14 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from skill_integrity.agent import AgentConfig, EpisodeResult, run_episode
-from skill_integrity.errors import ConfigError, EvaluationError
-from skill_integrity.lessons import ATTACKER_ADDRESS
-from skill_integrity.mock import MockPlanner
-from skill_integrity.planner import EpisodePlanner
-from skill_integrity.policy import AuditLog, DecisionKind, EndorsementDecider, StaticDecider
-from skill_integrity.reflection import Granularity
-from skill_integrity.scenarios import (
+from skill_taint.agent import AgentConfig, EpisodeResult, run_episode
+from skill_taint.errors import ConfigError, EvaluationError
+from skill_taint.lessons import ATTACKER_ADDRESS
+from skill_taint.mock import MockPlanner
+from skill_taint.planner import EpisodePlanner
+from skill_taint.policy import AuditLog, DecisionKind, EndorsementDecider, StaticDecider
+from skill_taint.reflection import Granularity
+from skill_taint.scenarios import (
     ATTACK_TASK_IDS,
     CLEANUP_TASK_ID,
     SCENARIO,
@@ -21,7 +21,7 @@ from skill_integrity.scenarios import (
     fresh_workspace,
     task_by_id,
 )
-from skill_integrity.skills import SkillLibrary
+from skill_taint.skills import SkillLibrary
 
 COMPARE_DEFENSES = ("off", "segment", "episode", "gate")
 

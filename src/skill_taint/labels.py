@@ -10,7 +10,7 @@ implicit endorsement of U up to the instruction channel.
 from collections.abc import Sequence
 from enum import Enum
 
-from skill_integrity.errors import EmptyJoinError, UnknownIntegrityLabelError
+from skill_taint.errors import EmptyJoinError, UnknownIntegrityLabelError
 
 
 class Integrity(Enum):

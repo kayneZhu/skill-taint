@@ -11,8 +11,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from skill_integrity.errors import MalformedSkillError, SkillConflictError
-from skill_integrity.labels import Integrity, parse_integrity
+from skill_taint.errors import MalformedSkillError, SkillConflictError
+from skill_taint.labels import Integrity, parse_integrity
 
 _TOKEN = re.compile(pattern=r"[a-z0-9_:-]+")
 _HEADER_KEYS = ("id", "label", "derived_from", "episode")

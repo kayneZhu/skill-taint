@@ -6,4 +6,4 @@ planner is a scripted simulation of an agent that follows skills it is given.
 It is not a language model.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

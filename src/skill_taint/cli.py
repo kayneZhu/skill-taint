@@ -5,10 +5,10 @@ import os
 import sys
 from pathlib import Path
 
-from skill_integrity.errors import ConfigError, MissingConfigError
-from skill_integrity.evaluate import COMPARE_DEFENSES, run_mock_compare, run_one
-from skill_integrity.llm import OpenAIPlanner, UrllibTransport
-from skill_integrity.mock import MockPlanner
+from skill_taint.errors import ConfigError, MissingConfigError
+from skill_taint.evaluate import COMPARE_DEFENSES, run_mock_compare, run_one
+from skill_taint.llm import OpenAIPlanner, UrllibTransport
+from skill_taint.mock import MockPlanner
 
 
 def main(*, argv: list[str] | None = None) -> None:

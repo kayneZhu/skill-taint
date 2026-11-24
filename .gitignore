@@ -14,3 +14,14 @@ wheels/
 .mypy_cache/
 .ruff_cache/
 runs/
+
+# Secrets. Never commit the OpenRouter key.
+.env
+.env.*
+!.env.example
+
+# Per-call logs and on-disk skill libraries from paid runs.
+results/raw/
+results/libraries/
+results/**/*.tmp
+results/last_error.txt

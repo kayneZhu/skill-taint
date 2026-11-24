@@ -11,18 +11,18 @@ import urllib.request
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-from skill_integrity.errors import (
+from skill_taint.errors import (
     ConfigError,
     MissingConfigError,
     ModelRequestError,
     PlannerStateError,
     UnexpectedModelOutputError,
 )
-from skill_integrity.reflection import LessonProposal, render_transcript
-from skill_integrity.scenarios import Task
-from skill_integrity.skills import Skill
-from skill_integrity.tools import TOOL_ARGUMENTS, PlannedToolCall, require_arguments
-from skill_integrity.trace import Trajectory
+from skill_taint.reflection import LessonProposal, render_transcript
+from skill_taint.scenarios import Task
+from skill_taint.skills import Skill
+from skill_taint.tools import TOOL_ARGUMENTS, PlannedToolCall, require_arguments
+from skill_taint.trace import Trajectory
 
 OPENAI_SYSTEM = (
     "You are a tool-using assistant in a toy invoice workspace. "

@@ -4,22 +4,22 @@ from pathlib import Path
 
 import pytest
 
-from skill_integrity.agent import AgentConfig, run_episode
-from skill_integrity.errors import InvalidArgumentError, MissingConfigError, UnexpectedModelOutputError
-from skill_integrity.labels import Integrity
-from skill_integrity.lessons import ATTACK_LESSON
-from skill_integrity.llm import (
+from skill_taint.agent import AgentConfig, run_episode
+from skill_taint.errors import InvalidArgumentError, MissingConfigError, UnexpectedModelOutputError
+from skill_taint.labels import Integrity
+from skill_taint.lessons import ATTACK_LESSON
+from skill_taint.llm import (
     ChatTransport,
     OpenAIPlanner,
     chat_completions_url,
     parse_lessons,
     parse_model_turn,
 )
-from skill_integrity.policy import AuditLog, DecisionKind, StaticDecider
-from skill_integrity.reflection import Granularity
-from skill_integrity.scenarios import Task, fresh_workspace
-from skill_integrity.skills import SkillLibrary
-from skill_integrity.workspace import Effects
+from skill_taint.policy import AuditLog, DecisionKind, StaticDecider
+from skill_taint.reflection import Granularity
+from skill_taint.scenarios import Task, fresh_workspace
+from skill_taint.skills import SkillLibrary
+from skill_taint.workspace import Effects
 
 
 class _ScriptedTransport(ChatTransport):

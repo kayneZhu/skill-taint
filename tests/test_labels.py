@@ -1,7 +1,7 @@
 import pytest
 
-from skill_integrity.errors import EmptyJoinError, UnknownIntegrityLabelError
-from skill_integrity.labels import Integrity, join, join_all, parse_integrity
+from skill_taint.errors import EmptyJoinError, UnknownIntegrityLabelError
+from skill_taint.labels import Integrity, join, join_all, parse_integrity
 
 
 def test_join_is_the_contaminated_upper_bound() -> None:

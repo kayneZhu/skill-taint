@@ -130,3 +130,25 @@ class UnknownTaskError(SkillIntegrityError):
 
 class EvaluationError(SkillIntegrityError):
     """Scoring was given an incomplete or inconsistent run."""
+
+
+class EmptyLengthError(SkillIntegrityError):
+    """finish_reason was length and the visible content was empty."""
+
+
+class IncompleteModelCall(SkillIntegrityError):
+    """A model call failed twice with the same request."""
+
+    def __init__(self, *, reason: str) -> None:
+        if reason == "":
+            raise ValueError("incomplete reason is empty")
+        self.reason = reason
+        super().__init__(reason)
+
+
+class UntrackedCostError(SkillIntegrityError):
+    """A response did not include enough usage data to record a cost."""
+
+
+class BudgetStop(SkillIntegrityError):
+    """Cumulative spend reached the scheduling stop, so a new run was not started."""

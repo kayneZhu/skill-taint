@@ -1,4 +1,6 @@
-# Skill integrity demo
+# Skill taint
+
+Research harness for reflection laundering. The package name is `skill-taint` (`skill_taint`). The scripted integrity demo below is unchanged and is not the paid model grid. Campaign definitions, provenance-partitioned reflection, and the experiment report live under `src/skill_taint/workspaces/`, `configs/grid.yaml`, and `docs/`.
 
 A small executable prototype of one integrity failure in a self-improving tool-using agent. After an episode, the agent writes lessons into markdown files. The next episode loads those files as instructions. An indirect prompt injection in one email can be copied into that store and then cause a consequential tool call on a later task. The defense labels the lesson from the segments it was copied from, keeps an untrusted skill out of the instruction channel, and requires an explicit endorsement before a consequential call runs while an untrusted skill is loaded.
 

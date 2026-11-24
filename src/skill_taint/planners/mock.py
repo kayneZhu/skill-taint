@@ -9,13 +9,13 @@ UnknownLessonError rather than being skipped.
 
 from collections.abc import Sequence
 
-from skill_integrity.errors import DuplicateLessonError, PlannerStateError
-from skill_integrity.lessons import lesson_proposals_from_text, planned_effects
-from skill_integrity.reflection import LessonProposal
-from skill_integrity.scenarios import Task
-from skill_integrity.skills import Skill
-from skill_integrity.tools import PlannedToolCall
-from skill_integrity.trace import Trajectory
+from skill_taint.errors import DuplicateLessonError, PlannerStateError
+from skill_taint.lessons import lesson_proposals_from_text, planned_effects
+from skill_taint.reflection import LessonProposal
+from skill_taint.scenarios import Task
+from skill_taint.skills import Skill
+from skill_taint.tools import PlannedToolCall
+from skill_taint.trace import Trajectory
 
 
 class MockPlanner:

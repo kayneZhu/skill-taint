@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from skill_integrity.errors import InvalidArgumentError, UnknownToolError
+from skill_taint.errors import InvalidArgumentError, UnknownToolError
 
 
 @dataclass(frozen=True, kw_only=True)

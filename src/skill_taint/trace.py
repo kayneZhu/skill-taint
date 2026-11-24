@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass, field
 
-from skill_integrity.errors import ConfigError, DuplicateSegmentError, UnknownSegmentError
-from skill_integrity.labels import Integrity
+from skill_taint.errors import ConfigError, DuplicateSegmentError, UnknownSegmentError
+from skill_taint.labels import Integrity
 
 
 @dataclass(frozen=True, kw_only=True)

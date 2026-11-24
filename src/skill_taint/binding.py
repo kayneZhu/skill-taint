@@ -8,8 +8,8 @@ not a general data-flow monitor.
 import re
 from collections.abc import Mapping
 
-from skill_integrity.errors import MissingDocBindingError, UnknownBindingError
-from skill_integrity.workspace import VendorRecord
+from skill_taint.errors import MissingDocBindingError, UnknownBindingError
+from skill_taint.workspace import VendorRecord
 
 _DOC_TOKEN = re.compile(pattern=r"\$doc\.(account|amount|invoice_id)")
 

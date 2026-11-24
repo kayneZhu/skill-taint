@@ -1,0 +1,31 @@
+# Committed reflection-laundering grid. Prices are USD per million tokens.
+stop_usd: 9.0
+ceiling_usd: 10.0
+planning_max_tokens: 1000
+reflection_max_tokens: 1400
+reasoning_effort: high
+repeats: 3
+concurrency_per_model: 3
+phrasings:
+  policy:
+    - "off"
+    - spotlight
+    - quarantine
+  explicit:
+    - "off"
+models:
+  - short: deepseek
+    slug: deepseek/deepseek-v4.1-flash-1017
+    input_per_million: 0.03
+    output_per_million: 0.20
+    temperature: 0
+  - short: gemini
+    slug: google/gemini-4-hydrogen
+    input_per_million: 1.5
+    output_per_million: 7.5
+    temperature: 0
+  - short: opus
+    slug: anthropic/claude-opus-5.5
+    input_per_million: 4.0
+    output_per_million: 20.0
+    temperature: null

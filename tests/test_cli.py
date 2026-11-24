@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from skill_integrity.cli import main
-from skill_integrity.errors import ConfigError, MissingConfigError
-from skill_integrity.evaluate import run_mock_compare
+from skill_taint.cli import main
+from skill_taint.errors import ConfigError, MissingConfigError
+from skill_taint.evaluate import run_mock_compare
 
 
 def test_readme_records_the_mock_report(tmp_path: Path) -> None:

@@ -1,23 +1,23 @@
 import pytest
 
-from skill_integrity.errors import (
+from skill_taint.errors import (
     MalformedLessonError,
     UngroundedLessonError,
     UnknownLessonError,
     UnknownSegmentError,
 )
-from skill_integrity.labels import Integrity
-from skill_integrity.lessons import (
+from skill_taint.labels import Integrity
+from skill_taint.lessons import (
     ATTACK_LESSON,
     ATTACKER_ADDRESS,
     FILING_LESSON,
     parse_effect,
     planned_effects,
 )
-from skill_integrity.lessons import SendLesson
-from skill_integrity.mock import proposals_from_trajectory
-from skill_integrity.reflection import Granularity, LessonProposal, assign_label
-from skill_integrity.trace import Segment, Trajectory
+from skill_taint.lessons import SendLesson
+from skill_taint.mock import proposals_from_trajectory
+from skill_taint.reflection import Granularity, LessonProposal, assign_label
+from skill_taint.trace import Segment, Trajectory
 
 
 def _trajectory() -> Trajectory:

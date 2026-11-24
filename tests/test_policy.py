@@ -2,15 +2,15 @@ from pathlib import Path
 
 import pytest
 
-from skill_integrity.errors import (
+from skill_taint.errors import (
     ConfigError,
     MalformedSkillError,
     SkillConflictError,
     UnknownToolError,
 )
-from skill_integrity.labels import Integrity
-from skill_integrity.lessons import ATTACK_LESSON, FILING_LESSON
-from skill_integrity.policy import (
+from skill_taint.labels import Integrity
+from skill_taint.lessons import ATTACK_LESSON, FILING_LESSON
+from skill_taint.policy import (
     AuditLog,
     DecisionKind,
     EndorsementDecider,
@@ -18,7 +18,7 @@ from skill_integrity.policy import (
     StaticDecider,
     authorize,
 )
-from skill_integrity.skills import SkillLibrary
+from skill_taint.skills import SkillLibrary
 
 
 class _RecordingDecider(EndorsementDecider):
