@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 
 from skill_taint.errors import ConfigError
@@ -92,6 +93,8 @@ def _run(*, root: Path, api_key: str, probe_only: bool) -> None:
         family="record_update",
     )
     sys.stdout.write(f"record probe start spent_usd={ledger.spent_usd:.6f}\n")
+    process_started = utc_now()
+    timer = time.perf_counter()
     probe_summary = execute_campaign(
         root=root,
         spec=probe,
@@ -99,6 +102,7 @@ def _run(*, root: Path, api_key: str, probe_only: bool) -> None:
         ledger=ledger,
         planning_max_tokens=planning,
         reflection_max_tokens=reflection,
+        replace_incomplete=True,
     )
     _print_probe(summary=probe_summary)
     _require_probe(summary=probe_summary)
@@ -127,7 +131,6 @@ def _run(*, root: Path, api_key: str, probe_only: bool) -> None:
     sys.stdout.write(
         f"record grid start spent_usd={ledger.spent_usd:.6f} concurrency={limits}\n"
     )
-    started = time.perf_counter()
     record_costs: dict[str, float] = {}
     _run_rounds(
         root=root,
@@ -140,7 +143,10 @@ def _run(*, root: Path, api_key: str, probe_only: bool) -> None:
         reflection_max_tokens=reflection,
         phase_name="record",
     )
-    plain_elapsed = time.perf_counter() - started
+    plain_elapsed = time.perf_counter() - timer
+    finished = probe_summary.get("finished")
+    if isinstance(finished, str) and finished < process_started:
+        plain_elapsed += _span_seconds(summary=probe_summary)
     formal_note = _formal_note(
         grid_models=tuple(model.slug for model in grid.models),
         ledger_spent=ledger.spent_usd,
@@ -176,6 +182,14 @@ def _run(*, root: Path, api_key: str, probe_only: bool) -> None:
         f"plain_seconds={plain_elapsed:.1f} formal={formal_note} "
         f"formal_seconds={formal_elapsed:.1f}\n"
     )
+
+
+def _span_seconds(*, summary: dict[str, object]) -> float:
+    start = summary.get("started")
+    end = summary.get("finished")
+    if not isinstance(start, str) or not isinstance(end, str):
+        raise ConfigError("summary is missing started or finished")
+    return (datetime.fromisoformat(end) - datetime.fromisoformat(start)).total_seconds()
 
 
 def _require_probe(*, summary: dict[str, object]) -> None:

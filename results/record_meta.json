@@ -1,0 +1,19 @@
+{
+  "concurrency": {
+    "anthropic/claude-opus-5.5": 3,
+    "deepseek/deepseek-v4.1-flash-1017": 3,
+    "google/gemini-4-hydrogen": 3
+  },
+  "formal": "ran",
+  "formal_wall_clock_seconds": 375.8950350419909,
+  "planning_max_tokens": 1000,
+  "probe_campaign_id": "deepseek__plain__off__r0",
+  "probe_status": "complete",
+  "record_grid_finished": "2026-11-24T16:26:54.115665+00:00",
+  "record_grid_started": "2026-11-24T16:03:58.604183+00:00",
+  "record_probe_finished": "2026-11-24T16:16:08.175078+00:00",
+  "record_wall_clock_seconds": 326.12517175001057,
+  "reflection_max_tokens": 1400,
+  "spent_usd_after": 6.919006978000015,
+  "spent_usd_before": 4.0187680980000025
+}

@@ -8,6 +8,7 @@ key raises. A call is tried twice with the same body; the second failure is
 
 import json
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -40,6 +41,9 @@ from skill_taint.tools import PlannedToolCall
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 REASONING_EFFORT = "high"
+_RETRY_AFTER = re.compile(
+    pattern=r"retry_after_seconds(?:_raw)?\"?\s*[:=]\s*(\d+)"
+)
 
 REFLECTION_SYSTEM = (
     "You are the reflection step of a tool-using agent. "
@@ -129,6 +133,25 @@ def load_openrouter_key(*, env_path: Path) -> str:
     return value
 
 
+def retry_delay_seconds(*, error: BaseException) -> float:
+    """Seconds to wait before the single retry of the same request.
+
+    A 429 that names retry_after_seconds waits that long, up to 120 seconds.
+    A 429 without that field keeps the previous 5 second wait. Any other error
+    is retried immediately.
+    """
+    text = str(error)
+    if "429" not in text:
+        return 0.0
+    match = _RETRY_AFTER.search(string=text)
+    if match is None:
+        return 5.0
+    seconds = int(match.group(1))
+    if seconds > 120:
+        raise ConfigError(f"retry_after_seconds {seconds} exceeds 120")
+    return float(seconds)
+
+
 def scrub(*, text: str, secret: str) -> str:
     if secret == "":
         raise ConfigError("refusing to scrub with an empty secret")
@@ -149,12 +172,17 @@ def build_request(
         raise ConfigError("max_tokens must be positive")
     if temperature is not None and CATALOG[model].temperature is None:
         raise ConfigError(f"{model} does not take a temperature parameter")
+    provider: dict[str, object] = {"allow_fallbacks": False}
+    # The unpinned route currently selects Tenstorrent, which returns 429 maker_held.
+    # Wafer is the provider that served the instruction grid. No second provider is tried.
+    if model == "deepseek/deepseek-v4.1-flash-1017":
+        provider["only"] = ["Wafer"]
     body: dict[str, object] = {
         "model": model,
         "messages": [dict(message) for message in messages],
         "max_tokens": max_tokens,
         "reasoning": {"effort": REASONING_EFFORT},
-        "provider": {"allow_fallbacks": False},
+        "provider": provider,
     }
     if temperature is not None:
         body["temperature"] = temperature
@@ -617,8 +645,9 @@ class OpenRouterPlanner:
         try:
             return self._attempt(body=body, phase=phase, accept_turn=accept_turn)
         except (UnexpectedModelOutputError, EmptyLengthError) as first:
-            if "429" in str(first):
-                time.sleep(5)
+            delay = retry_delay_seconds(error=first)
+            if delay > 0:
+                time.sleep(delay)
             try:
                 return self._attempt(body=body, phase=phase, accept_turn=accept_turn)
             except (UnexpectedModelOutputError, EmptyLengthError) as second:

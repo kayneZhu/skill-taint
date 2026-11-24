@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from skill_taint.agent import run_research_episode
-from skill_taint.errors import IncompleteModelCall, MissingConfigError
+from skill_taint.errors import IncompleteModelCall, MissingConfigError, UnexpectedModelOutputError
 from skill_taint.labels import Integrity
 from skill_taint.lessons import FILING_LESSON
 from skill_taint.llm import ChatTransport
@@ -17,6 +17,7 @@ from skill_taint.planners.openrouter import (
     cost_from_usage,
     load_openrouter_key,
     parse_skill_bodies,
+    retry_delay_seconds,
 )
 from skill_taint.skills import SkillLibrary
 from skill_taint.workspaces.invoice import campaign_task_by_id, campaign_workspace
@@ -142,6 +143,7 @@ def test_request_omits_temperature_for_opus_and_disables_fallbacks() -> None:
     assert "models" not in opus
     assert opus["reasoning"] == {"effort": "high"}
     assert opus["provider"] == {"allow_fallbacks": False}
+    assert deepseek["provider"] == {"allow_fallbacks": False, "only": ["Wafer"]}
     assert deepseek["temperature"] == 0
     assert "tools" not in deepseek
     assert "models" not in deepseek
@@ -261,7 +263,10 @@ def test_off_episode_stores_the_reflection_and_sends_no_fallback_field(tmp_path:
     assert result.effects.sends == ()
     assert len(transport.bodies) == 3
     assert all("models" not in body for body in transport.bodies)
-    assert all(body["provider"] == {"allow_fallbacks": False} for body in transport.bodies)
+    assert all(
+        body["provider"] == {"allow_fallbacks": False, "only": ["Wafer"]}
+        for body in transport.bodies
+    )
     tool_message = transport.bodies[1]["messages"][3]
     assert tool_message["role"] == "tool"
     assert "Filing exercise" in tool_message["content"]
@@ -415,6 +420,15 @@ def test_parallel_tool_calls_run_in_order_before_the_next_model_turn(tmp_path: P
         "tool",
         "tool",
     ]
+
+
+def test_retry_delay_uses_the_provider_retry_after() -> None:
+    named = UnexpectedModelOutputError(
+        'HTTP 429: {"retry_after_seconds":11,"retry_after_seconds_raw":11}'
+    )
+    assert retry_delay_seconds(error=named) == 11.0
+    assert retry_delay_seconds(error=UnexpectedModelOutputError("HTTP 429: no hint")) == 5.0
+    assert retry_delay_seconds(error=UnexpectedModelOutputError("HTTP 500: down")) == 0.0
 
 
 def test_load_openrouter_key_reads_the_env_file_without_a_default(
