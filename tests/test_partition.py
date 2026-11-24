@@ -194,6 +194,7 @@ def test_campaign_quarantine_does_not_trigger_on_a_paraphrase(tmp_path: Path) ->
     run = run_campaign(
         condition="quarantine",
         phrasing="policy",
+        family="instruction",
         planner_factory=factory,
         library=SkillLibrary(root=tmp_path / "skills"),
         workspace=campaign_workspace(phrasing="policy"),

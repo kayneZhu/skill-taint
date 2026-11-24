@@ -52,6 +52,10 @@ class UnknownInvoiceError(SkillIntegrityError):
     """The trusted vendor table has no row for this invoice."""
 
 
+class UnknownSupplierError(SkillIntegrityError):
+    """The trusted vendor registry has no row for this supplier."""
+
+
 class UnsafePathError(SkillIntegrityError):
     """A path is absolute, escapes the workspace, or uses a disallowed root."""
 

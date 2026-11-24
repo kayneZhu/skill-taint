@@ -14,12 +14,13 @@ class PlannedToolCall:
     arguments: dict[str, str]
 
 CONSEQUENTIAL_TOOLS = frozenset({"send_email", "transfer", "delete_file"})
-NONCONSEQUENTIAL_TOOLS = frozenset({"read_email", "search_docs", "write_file"})
+NONCONSEQUENTIAL_TOOLS = frozenset({"read_email", "search_docs", "lookup_vendor", "write_file"})
 ALL_TOOLS = CONSEQUENTIAL_TOOLS | NONCONSEQUENTIAL_TOOLS
 
 TOOL_ARGUMENTS: dict[str, tuple[str, ...]] = {
     "read_email": ("email_id",),
     "search_docs": ("invoice_id",),
+    "lookup_vendor": ("supplier_id",),
     "write_file": ("path", "content"),
     "send_email": ("to", "subject", "body"),
     "transfer": ("invoice_id", "account", "amount"),

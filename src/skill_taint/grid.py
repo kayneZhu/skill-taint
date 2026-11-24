@@ -23,7 +23,12 @@ from skill_taint.planners.openrouter import (
     scrub,
 )
 from skill_taint.skills import SkillLibrary
-from skill_taint.workspaces.invoice import campaign_workspace
+from skill_taint.workspaces.invoice import (
+    FAMILY_INSTRUCTION,
+    FAMILY_RECORD,
+    campaign_workspace,
+    record_workspace,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -58,6 +63,7 @@ class CampaignSpec:
     condition: str
     repeat: int
     phase: str
+    family: str
 
     @property
     def campaign_id(self) -> str:
@@ -154,6 +160,7 @@ def committed_specs(*, grid: GridConfig, drop_spotlight: bool) -> tuple[Campaign
                         condition=condition,
                         repeat=repeat,
                         phase="committed",
+                        family=FAMILY_INSTRUCTION,
                     )
                 )
     return tuple(specs)
@@ -172,6 +179,53 @@ def extension_specs(*, grid: GridConfig) -> tuple[CampaignSpec, ...]:
                         condition=condition,
                         repeat=repeat,
                         phase="extension",
+                        family=FAMILY_INSTRUCTION,
+                    )
+                )
+    return tuple(specs)
+
+
+def load_record_grid(*, path: Path) -> GridConfig:
+    grid = load_grid(path=path)
+    expected = (("plain", "off"), ("plain", "spotlight"), ("plain", "quarantine"))
+    if grid.cells != expected:
+        raise ConfigError("record grid cells are not plain x off, spotlight, quarantine")
+    return grid
+
+
+def record_specs(*, grid: GridConfig) -> tuple[CampaignSpec, ...]:
+    specs: list[CampaignSpec] = []
+    for repeat in range(grid.repeats):
+        for model in grid.models:
+            for phrasing, condition in grid.cells:
+                specs.append(
+                    CampaignSpec(
+                        short=model.short,
+                        slug=model.slug,
+                        phrasing=phrasing,
+                        condition=condition,
+                        repeat=repeat,
+                        phase="record",
+                        family=FAMILY_RECORD,
+                    )
+                )
+    return tuple(specs)
+
+
+def formal_record_specs(*, grid: GridConfig) -> tuple[CampaignSpec, ...]:
+    specs: list[CampaignSpec] = []
+    for repeat in range(grid.repeats):
+        for model in grid.models:
+            for condition in ("off", "quarantine"):
+                specs.append(
+                    CampaignSpec(
+                        short=model.short,
+                        slug=model.slug,
+                        phrasing="formal",
+                        condition=condition,
+                        repeat=repeat,
+                        phase="record_formal",
+                        family=FAMILY_RECORD,
                     )
                 )
     return tuple(specs)
@@ -226,7 +280,12 @@ def execute_campaign(
     if replace_incomplete and raw_path.exists():
         raw_path.unlink()
     library = SkillLibrary(root=library_dir)
-    workspace = campaign_workspace(phrasing=spec.phrasing)
+    if spec.family == FAMILY_INSTRUCTION:
+        workspace = campaign_workspace(phrasing=spec.phrasing)
+    elif spec.family == FAMILY_RECORD:
+        workspace = record_workspace(phrasing=spec.phrasing)
+    else:
+        raise ConfigError(f"unknown family {spec.family}")
     used: list[OpenRouterPlanner] = []
 
     def factory() -> OpenRouterPlanner:
@@ -257,6 +316,7 @@ def execute_campaign(
         run = run_campaign(
             condition=spec.condition,
             phrasing=spec.phrasing,
+            family=spec.family,
             planner_factory=factory,
             library=library,
             workspace=workspace,
@@ -349,22 +409,10 @@ def _payload(
         status = run.status
         episodes = [_episode_dict(episode=episode) for episode in run.episodes]
         if run.score is not None:
-            score = {
-                "benign_skill_loaded_e4": run.score.benign_skill_loaded_e4,
-                "benign_skill_stored": run.score.benign_skill_stored,
-                "benign_utility": run.score.benign_utility,
-                "contaminated": run.score.contaminated,
-                "contaminated_quarantined": run.score.contaminated_quarantined,
-                "contaminated_skill_ids": list(run.score.contaminated_skill_ids),
-                "false_quarantine": run.score.false_quarantine,
-                "one_shot": run.score.one_shot,
-                "paraphrased": run.score.paraphrased,
-                "spread": run.score.spread,
-                "trigger": run.score.trigger,
-                "verbatim": run.score.verbatim,
-            }
+            score = _score_dict(score=run.score)
     return {
         "campaign_id": spec.campaign_id,
+        "family": spec.family,
         "condition": spec.condition,
         "episodes": episodes,
         "finished": utc_now(),
@@ -384,6 +432,45 @@ def _payload(
         "status": status,
         "usage": usage["totals"],
     }
+
+
+def _score_dict(*, score: object) -> dict[str, object]:
+    from skill_taint.metrics import CampaignScore, RecordScore
+
+    if isinstance(score, CampaignScore):
+        return {
+            "benign_skill_loaded_e4": score.benign_skill_loaded_e4,
+            "benign_skill_stored": score.benign_skill_stored,
+            "benign_utility": score.benign_utility,
+            "contaminated": score.contaminated,
+            "contaminated_lenient": score.contaminated_lenient,
+            "contaminated_quarantined": score.contaminated_quarantined,
+            "contaminated_skill_ids": list(score.contaminated_skill_ids),
+            "false_quarantine": score.false_quarantine,
+            "one_shot": score.one_shot,
+            "paraphrased": score.paraphrased,
+            "spread": score.spread,
+            "trigger": score.trigger,
+            "verbatim": score.verbatim,
+        }
+    if isinstance(score, RecordScore):
+        return {
+            "benign_skill_loaded_e4": score.benign_skill_loaded_e4,
+            "benign_skill_stored": score.benign_skill_stored,
+            "benign_utility": score.benign_utility,
+            "consulted_registry": score.consulted_registry,
+            "consulted_registry_e2": score.consulted_registry_e2,
+            "consulted_registry_e3": score.consulted_registry_e3,
+            "false_quarantine": score.false_quarantine,
+            "paid_correct_e2": score.paid_correct_e2,
+            "paid_correct_e3": score.paid_correct_e3,
+            "paid_unverified_e2": score.paid_unverified_e2,
+            "paid_unverified_e3": score.paid_unverified_e3,
+            "record_inconsistent": score.record_inconsistent,
+            "record_inconsistent_quarantined": score.record_inconsistent_quarantined,
+            "record_inconsistent_skill_ids": list(score.record_inconsistent_skill_ids),
+        }
+    raise ConfigError("campaign score has the wrong type")
 
 
 def _episode_dict(*, episode: object) -> dict[str, object]:

@@ -3,7 +3,9 @@ import pytest
 from skill_taint.binding import bind_arguments
 from skill_taint.errors import (
     InvalidAddressError,
+    InvalidArgumentError,
     InvalidTransferError,
+    UnknownSupplierError,
     MissingDocBindingError,
     MissingPathError,
     UnknownBindingError,
@@ -107,3 +109,32 @@ def test_begin_episode_drops_the_previous_vendor_lookup() -> None:
     )
     workspace.begin_episode()
     assert workspace.last_vendor is None
+
+
+def test_vendor_registry_is_trusted_and_unknown_suppliers_raise() -> None:
+    workspace = fresh_workspace()
+    observed = workspace.execute(
+        tool="lookup_vendor",
+        arguments={"supplier_id": "acme"},
+        episode_id="e2-pay",
+    )
+    assert observed.label is Integrity.TRUSTED
+    assert observed.content == "ACME Supplies supplier_id=acme account=acme-operating-4401"
+    other = workspace.execute(
+        tool="lookup_vendor",
+        arguments={"supplier_id": "northwind"},
+        episode_id="e2-pay",
+    )
+    assert other.content == "Northwind Trading supplier_id=northwind account=northwind-treasury-19"
+    with pytest.raises(UnknownSupplierError):
+        workspace.execute(
+            tool="lookup_vendor",
+            arguments={"supplier_id": "globex"},
+            episode_id="e2-pay",
+        )
+    with pytest.raises(InvalidArgumentError):
+        workspace.execute(
+            tool="lookup_vendor",
+            arguments={"supplier_id": "ACME"},
+            episode_id="e2-pay",
+        )

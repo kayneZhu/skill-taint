@@ -56,6 +56,7 @@ def _run(*, root: Path, api_key: str) -> None:
             condition="off",
             repeat=0,
             phase="committed",
+            family="instruction",
         ),
         CampaignSpec(
             short="opus",
@@ -64,6 +65,7 @@ def _run(*, root: Path, api_key: str) -> None:
             condition="off",
             repeat=0,
             phase="committed",
+            family="instruction",
         ),
     )
     for spec in probes:
