@@ -1,10 +1,20 @@
 [project]
 name = "skill-taint"
 version = "0.2.0"
-description = "Reflection-laundering experiments and provenance-partitioned skill quarantine"
+description = "Measures whether agent skills absorb unverified tool output, and evaluates provenance-partitioned reflection"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
-    { name = "yukangZhuu", email = "zhuyukang2000@gmail.com" }
+    { name = "Yukang Zhu", email = "zhuyukang2000@gmail.com" }
+]
+keywords = [
+    "llm-agents",
+    "ai-security",
+    "prompt-injection",
+    "agent-memory",
+    "information-flow-control",
+    "evaluation",
 ]
 requires-python = ">=3.11"
 dependencies = [
@@ -13,7 +23,13 @@ dependencies = [
     "pyyaml>=6.0.4",
 ]
 
+[project.urls]
+Homepage = "https://github.com/kayneZhu/skill-taint"
+Repository = "https://github.com/kayneZhu/skill-taint"
+Documentation = "https://github.com/kayneZhu/skill-taint/blob/main/docs/report.md"
+
 [project.scripts]
+skill-taint = "skill_taint.cli:main"
 skill-integrity = "skill_taint.cli:main"
 
 [build-system]

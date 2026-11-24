@@ -9,18 +9,28 @@ wheels/
 # Virtual environments
 .venv
 
-# Test and local run output
+# Test, coverage, and local run output
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 runs/
+
+# Editor and OS clutter
+.DS_Store
+*.swp
 
 # Secrets. Never commit the OpenRouter key.
 .env
 .env.*
 !.env.example
 
-# Per-call logs and on-disk skill libraries from paid runs.
+# Local artifacts from paid runs.
+# results/summaries/, results/raw/, and results/*.json are the published
+# measurement. Those traces are small and stay tracked. results/raw/ is the
+# call log; scripts/make_report.py rebuilds the report from the summaries.
 results/libraries/
 results/**/*.tmp
 results/last_error.txt

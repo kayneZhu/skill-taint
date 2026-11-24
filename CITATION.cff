@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+title: "skill-taint: Measuring whether agent skills absorb unverified tool output"
+message: "If you use this software or its measurement, please cite it as below."
+type: software
+authors:
+  - family-names: Zhu
+    given-names: Yukang
+year: 2026
+license: MIT
+repository-code: "https://github.com/kayneZhu/skill-taint"
+url: "https://github.com/kayneZhu/skill-taint"
+keywords:
+  - llm-agents
+  - ai-security
+  - prompt-injection
+  - agent-memory
+  - information-flow-control
+  - evaluation
+abstract: >-
+  Measures whether LLM agents that write persistent skills after a task absorb
+  unverified content from external tool outputs, and evaluates
+  provenance-partitioned reflection. On the published invoice grid the measured
+  models did not store the planted content as an affirmative skill and did not
+  act on it.

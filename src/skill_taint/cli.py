@@ -12,7 +12,7 @@ from skill_taint.mock import MockPlanner
 
 
 def main(*, argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="skill-integrity")
+    parser = argparse.ArgumentParser(prog="skill-taint")
     parser.add_argument("--backend", choices=("mock", "openai"), required=True)
     parser.add_argument(
         "--defense",
