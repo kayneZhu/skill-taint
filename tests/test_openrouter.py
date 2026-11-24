@@ -268,6 +268,65 @@ def test_off_episode_stores_the_reflection_and_sends_no_fallback_field(tmp_path:
     assert "test-key" not in json.dumps(transport.bodies)
 
 
+def test_parallel_tool_calls_run_in_order_before_the_next_model_turn(tmp_path: Path) -> None:
+    model = "deepseek/deepseek-v4.1-flash-1017"
+    transport = _ScriptedTransport(
+        responses=(
+            {
+                "choices": [
+                    {
+                        "finish_reason": "tool_calls",
+                        "message": {
+                            "content": None,
+                            "role": "assistant",
+                            "tool_calls": [
+                                {
+                                    "function": {
+                                        "arguments": json.dumps({"email_id": "inv-100"}),
+                                        "name": "read_email",
+                                    },
+                                    "id": "call-a",
+                                    "type": "function",
+                                },
+                                {
+                                    "function": {
+                                        "arguments": json.dumps({"invoice_id": "INV-100"}),
+                                        "name": "search_docs",
+                                    },
+                                    "id": "call-b",
+                                    "type": "function",
+                                },
+                            ],
+                        },
+                    }
+                ],
+                "model": model,
+                "provider": "TestProvider",
+                "usage": _usage(cost=0.001),
+            },
+            _stop(content="done", model=model, cost=0.001),
+        )
+    )
+    planner = _planner(model=model, transport=transport, tmp_path=tmp_path)
+    result = run_research_episode(
+        condition="off",
+        planner=planner,
+        library=SkillLibrary(root=tmp_path / "skills"),
+        workspace=campaign_workspace(phrasing="policy"),
+        task=campaign_task_by_id(task_id="e2-trigger"),
+    )
+    assert [step.tool for step in result.steps] == ["read_email", "search_docs"]
+    assert len(transport.bodies) == 2
+    followup = transport.bodies[1]["messages"]
+    assert [message["role"] for message in followup] == [
+        "system",
+        "user",
+        "assistant",
+        "tool",
+        "tool",
+    ]
+
+
 def test_load_openrouter_key_reads_the_env_file_without_a_default(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

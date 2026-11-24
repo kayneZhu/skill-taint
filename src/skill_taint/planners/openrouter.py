@@ -103,9 +103,8 @@ CATALOG: dict[str, ModelSpec] = {
 @dataclass(frozen=True, kw_only=True)
 class OpenRouterTurn:
     content: str | None
-    planned: PlannedToolCall | None
+    calls: tuple[tuple[PlannedToolCall, str], ...]
     message: dict[str, object]
-    tool_call_id: str | None
     finish_reason: str
     returned_model: str
     provider: str | None
@@ -249,29 +248,31 @@ def parse_openrouter_turn(*, payload: Mapping[str, object]) -> OpenRouterTurn:
     if content is not None and not isinstance(content, str):
         raise UnexpectedModelOutputError("message content is not a string or null")
     tool_calls = message.get("tool_calls")
-    planned: PlannedToolCall | None
-    tool_call_id: str | None
-    if tool_calls is None:
-        planned = None
-        tool_call_id = None
-    else:
-        if not isinstance(tool_calls, list) or len(tool_calls) != 1:
-            raise UnexpectedModelOutputError("expected exactly one tool call")
-        planned, tool_call_id = _parse_tool_call(raw=tool_calls[0])
+    parsed_calls: list[tuple[PlannedToolCall, str]] = []
+    if tool_calls is not None:
+        if not isinstance(tool_calls, list) or len(tool_calls) == 0:
+            raise UnexpectedModelOutputError("tool_calls must be a non-empty list")
+        seen_ids: set[str] = set()
+        for raw in tool_calls:
+            planned, tool_call_id = _parse_tool_call(raw=raw)
+            if tool_call_id in seen_ids:
+                raise UnexpectedModelOutputError("duplicate tool call id")
+            seen_ids.add(tool_call_id)
+            parsed_calls.append((planned, tool_call_id))
+    calls = tuple(parsed_calls)
     visible = content if isinstance(content, str) else ""
-    if finish == "length" and planned is None and visible.strip() == "":
+    if finish == "length" and not calls and visible.strip() == "":
         raise EmptyLengthError("finish_reason length with empty content")
-    if finish == "length" and planned is not None:
+    if finish == "length" and calls:
         raise UnexpectedModelOutputError("truncated tool call")
     if finish == "length":
         finish = "stop"
-    if planned is None and finish != "stop":
+    if not calls and finish != "stop":
         raise UnexpectedModelOutputError(f"finish_reason {finish} had no tool call")
     return OpenRouterTurn(
         content=content if isinstance(content, str) else None,
-        planned=planned,
+        calls=calls,
         message=message,
-        tool_call_id=tool_call_id,
         finish_reason=finish,
         returned_model=returned,
         provider=provider,
@@ -394,6 +395,7 @@ class OpenRouterPlanner:
         self._messages: list[dict[str, object]] = []
         self._outstanding: PlannedToolCall | None = None
         self._tool_call_id: str | None = None
+        self._queue: list[tuple[PlannedToolCall, str]] = []
         self._finished = False
         self._episode_id = ""
         self.usage_records: list[dict[str, object]] = []
@@ -407,7 +409,7 @@ class OpenRouterPlanner:
     ) -> None:
         if not isinstance(spotlight, bool):
             raise ConfigError("spotlight must be a bool")
-        if self._outstanding is not None:
+        if self._outstanding is not None or self._queue:
             raise PlannerStateError("reset while a tool call is outstanding")
         system = RESEARCH_SYSTEM
         if spotlight:
@@ -422,12 +424,15 @@ class OpenRouterPlanner:
         ]
         self._outstanding = None
         self._tool_call_id = None
+        self._queue = []
         self._finished = False
         self._episode_id = task.task_id
 
     def next_call(self) -> PlannedToolCall | None:
         if self._outstanding is not None:
             raise PlannerStateError("next_call before observe")
+        if self._queue:
+            return self._take_queued()
         if self._finished:
             return None
         if self._episode_id == "":
@@ -442,12 +447,17 @@ class OpenRouterPlanner:
         if not isinstance(turn, OpenRouterTurn):
             raise ConfigError("planning request returned skill bodies")
         self._messages.append(turn.message)
-        if turn.planned is None:
+        if not turn.calls:
             self._finished = True
             return None
-        self._outstanding = turn.planned
-        self._tool_call_id = turn.tool_call_id
-        return turn.planned
+        self._queue = list(turn.calls)
+        return self._take_queued()
+
+    def _take_queued(self) -> PlannedToolCall:
+        call, tool_call_id = self._queue.pop(0)
+        self._outstanding = call
+        self._tool_call_id = tool_call_id
+        return call
 
     def observe(self, *, call: PlannedToolCall, content: str, executed: bool) -> None:
         del executed
@@ -555,7 +565,7 @@ class OpenRouterPlanner:
         turn = parse_openrouter_turn(payload=payload)
         if accept_turn:
             return turn
-        if turn.planned is not None:
+        if turn.calls:
             raise UnexpectedModelOutputError("reflection returned a tool call")
         if not isinstance(turn.content, str) or turn.content.strip() == "":
             raise UnexpectedModelOutputError("reflection content is empty")
@@ -614,10 +624,16 @@ class OpenRouterPlanner:
             if isinstance(raw_content, str):
                 content = scrub(text=raw_content, secret=self._api_key)
             tool_calls = message.get("tool_calls")
-            if isinstance(tool_calls, list) and len(tool_calls) == 1 and isinstance(tool_calls[0], dict):
-                function = tool_calls[0].get("function")
-                if isinstance(function, dict) and isinstance(function.get("name"), str):
-                    tool_name = function["name"]
+            names: list[str] = []
+            if isinstance(tool_calls, list):
+                for item in tool_calls:
+                    if not isinstance(item, dict):
+                        continue
+                    function = item.get("function")
+                    if isinstance(function, dict) and isinstance(function.get("name"), str):
+                        names.append(function["name"])
+            if names:
+                tool_name = ",".join(names)
         line = {
             "campaign_id": record.get("campaign_id"),
             "completion_tokens": record.get("completion_tokens"),
