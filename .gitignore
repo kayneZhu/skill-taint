@@ -21,7 +21,6 @@ runs/
 !.env.example
 
 # Per-call logs and on-disk skill libraries from paid runs.
-results/raw/
 results/libraries/
 results/**/*.tmp
 results/last_error.txt

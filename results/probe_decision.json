@@ -1,0 +1,26 @@
+{
+  "drop_spotlight": false,
+  "empty_length": false,
+  "planning_max_tokens": 1000,
+  "probes": [
+    {
+      "campaign_id": "deepseek__policy__off__r0",
+      "cost_usd": 0.0016817879999999998,
+      "incomplete_reason": null,
+      "returned_models": [
+        "deepseek/deepseek-v4.1-flash-1017"
+      ],
+      "status": "complete"
+    },
+    {
+      "campaign_id": "opus__policy__off__r0",
+      "cost_usd": 0.179628,
+      "incomplete_reason": null,
+      "returned_models": [
+        "anthropic/claude-opus-5.5"
+      ],
+      "status": "complete"
+    }
+  ],
+  "reflection_max_tokens": 1400
+}

@@ -1,0 +1,18 @@
+{
+  "concurrency": {
+    "anthropic/claude-opus-5.5": 3,
+    "deepseek/deepseek-v4.1-flash-1017": 3,
+    "google/gemini-4-hydrogen": 3
+  },
+  "drop_spotlight": false,
+  "extension": "scheduled",
+  "grid_finished": "2026-11-24T15:08:17.398573+00:00",
+  "grid_started": "2026-11-24T14:58:15.417239+00:00",
+  "pilot_finished": "2026-11-24T14:57:58.046032+00:00",
+  "pilot_started": "2026-11-24T14:48:18.592490+00:00",
+  "planning_max_tokens": 1000,
+  "reflection_max_tokens": 1400,
+  "spent_usd": 4.016860376000002,
+  "spent_usd_after_pilot": 0.30764057599999994,
+  "wall_clock_grid_seconds": 601.9711640419846
+}
