@@ -164,6 +164,31 @@ def build_request(
     return body
 
 
+def describe_payload(*, payload: object) -> str:
+    if not isinstance(payload, Mapping):
+        return "payload is not an object"
+    parts = ["keys=" + ",".join(sorted(str(key) for key in payload))]
+    choices = payload.get("choices")
+    if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+        choice = choices[0]
+        parts.append(f"finish={choice.get('finish_reason')}")
+        message = choice.get("message")
+        if isinstance(message, dict):
+            parts.append("message_keys=" + ",".join(sorted(str(key) for key in message)))
+            content = message.get("content")
+            if isinstance(content, str):
+                head = content[:160].replace("\n", " ")
+                parts.append(f"content_len={len(content)} content_head={head}")
+            elif content is None:
+                parts.append("content=null")
+            else:
+                parts.append(f"content_type={type(content).__name__}")
+    error = payload.get("error")
+    if error is not None:
+        parts.append("error=" + str(error)[:240])
+    return "; ".join(parts)
+
+
 def usage_from_generation(*, payload: Mapping[str, object]) -> dict[str, object]:
     data = payload.get("data")
     if not isinstance(data, dict):
@@ -557,12 +582,12 @@ class OpenRouterPlanner:
         )
         try:
             return self._attempt(body=body, phase=phase, accept_turn=accept_turn)
-        except (UnexpectedModelOutputError, EmptyLengthError, UntrackedCostError) as first:
+        except (UnexpectedModelOutputError, EmptyLengthError) as first:
             if "429" in str(first):
                 time.sleep(5)
             try:
                 return self._attempt(body=body, phase=phase, accept_turn=accept_turn)
-            except (UnexpectedModelOutputError, EmptyLengthError, UntrackedCostError) as second:
+            except (UnexpectedModelOutputError, EmptyLengthError) as second:
                 raise IncompleteModelCall(
                     reason=scrub(text=str(second), secret=self._api_key)
                 ) from second
@@ -615,20 +640,29 @@ class OpenRouterPlanner:
             },
             method="GET",
         )
-        try:
-            with urllib.request.urlopen(url=request, timeout=self._timeout_seconds) as response:
-                raw_bytes = response.read()
-        except urllib.error.HTTPError as exc:
-            detail_bytes = exc.read()
+        last_error: ModelRequestError | None = None
+        for attempt in (1, 2, 3):
             try:
-                detail = detail_bytes.decode("utf-8")
-            except UnicodeDecodeError as decode_error:
-                raise UntrackedCostError("generation error body is not UTF-8") from decode_error
-            raise ModelRequestError(
-                scrub(text=f"HTTP {exc.code}: {detail}", secret=self._api_key)
-            ) from exc
-        except urllib.error.URLError as exc:
-            raise ModelRequestError(f"generation lookup failed: {exc.reason}") from exc
+                with urllib.request.urlopen(url=request, timeout=self._timeout_seconds) as response:
+                    raw_bytes = response.read()
+                last_error = None
+                break
+            except urllib.error.HTTPError as exc:
+                detail_bytes = exc.read()
+                try:
+                    detail = detail_bytes.decode("utf-8")
+                except UnicodeDecodeError as decode_error:
+                    raise UntrackedCostError("generation error body is not UTF-8") from decode_error
+                last_error = ModelRequestError(
+                    scrub(text=f"HTTP {exc.code}: {detail}", secret=self._api_key)
+                )
+                if exc.code != 404 or attempt == 3:
+                    raise last_error from exc
+                time.sleep(2)
+            except urllib.error.URLError as exc:
+                raise ModelRequestError(f"generation lookup failed: {exc.reason}") from exc
+        if last_error is not None:
+            raise last_error
         try:
             parsed = json.loads(raw_bytes.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -642,6 +676,7 @@ class OpenRouterPlanner:
         *,
         generation_id: str,
         base: dict[str, object],
+        chat_payload: Mapping[str, object],
     ) -> dict[str, object]:
         try:
             payload = self._fetch_generation(generation_id=generation_id)
@@ -650,7 +685,13 @@ class OpenRouterPlanner:
             self._ledger.mark_untracked(record=base)
             self.usage_records.append(dict(base))
             raise UntrackedCostError(
-                scrub(text=f"generation lookup failed: {exc}", secret=self._api_key)
+                scrub(
+                    text=(
+                        f"generation lookup failed: {exc}; "
+                        f"{describe_payload(payload=chat_payload)}"
+                    ),
+                    secret=self._api_key,
+                )
             ) from exc
 
     def _account(self, *, payload: Mapping[str, object], phase: str) -> None:
@@ -668,7 +709,11 @@ class OpenRouterPlanner:
         if not isinstance(usage, dict):
             generation_id = payload.get("id")
             if isinstance(generation_id, str) and generation_id != "":
-                usage = self._usage_from_generation(generation_id=generation_id, base=base)
+                usage = self._usage_from_generation(
+                    generation_id=generation_id,
+                    base=base,
+                    chat_payload=payload,
+                )
             else:
                 self._ledger.mark_untracked(record=base)
                 self.usage_records.append(dict(base))
