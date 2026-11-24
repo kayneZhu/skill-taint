@@ -10,6 +10,9 @@ import json
 import os
 import threading
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -161,6 +164,32 @@ def build_request(
     return body
 
 
+def usage_from_generation(*, payload: Mapping[str, object]) -> dict[str, object]:
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        raise UntrackedCostError(
+            "generation payload has no data object; keys="
+            + ",".join(sorted(str(key) for key in payload))
+        )
+    nested = data.get("usage")
+    if isinstance(nested, dict):
+        return dict(nested)
+    if "total_cost" not in data:
+        raise UntrackedCostError(
+            "generation data has no total_cost; keys="
+            + ",".join(sorted(str(key) for key in data))
+        )
+    usage: dict[str, object] = {"cost": data["total_cost"]}
+    if "tokens_prompt" in data:
+        usage["prompt_tokens"] = data["tokens_prompt"]
+    if "tokens_completion" in data:
+        usage["completion_tokens"] = data["tokens_completion"]
+    reasoning = data.get("native_tokens_reasoning")
+    if isinstance(reasoning, int) and not isinstance(reasoning, bool):
+        usage["completion_tokens_details"] = {"reasoning_tokens": reasoning}
+    return usage
+
+
 def cost_from_usage(*, request_model: str, usage: Mapping[str, object]) -> tuple[float, str]:
     if "cost" in usage and usage["cost"] is not None:
         return _as_float(value=usage["cost"], field="usage.cost"), "usage.cost"
@@ -294,7 +323,7 @@ class CostLedger:
 
     def can_start_campaign(self) -> bool:
         with self._lock:
-            return (not self.untracked) and self.spent_usd < self.stop_usd
+            return self.spent_usd < self.stop_usd
 
     def charge(self, *, record: dict[str, object], cost_usd: float) -> None:
         if cost_usd < 0:
@@ -571,6 +600,59 @@ class OpenRouterPlanner:
             raise UnexpectedModelOutputError("reflection content is empty")
         return parse_skill_bodies(content=turn.content)
 
+    def _fetch_generation(self, *, generation_id: str) -> dict[str, object]:
+        if generation_id == "" or any(char in generation_id for char in "/?#&"):
+            raise UntrackedCostError("generation id is not a single token")
+        url = "https://openrouter.ai/api/v1/generation?id=" + urllib.parse.quote(
+            string=generation_id,
+            safe="",
+        )
+        request = urllib.request.Request(
+            url=url,
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+            },
+            method="GET",
+        )
+        try:
+            with urllib.request.urlopen(url=request, timeout=self._timeout_seconds) as response:
+                raw_bytes = response.read()
+        except urllib.error.HTTPError as exc:
+            detail_bytes = exc.read()
+            try:
+                detail = detail_bytes.decode("utf-8")
+            except UnicodeDecodeError as decode_error:
+                raise UntrackedCostError("generation error body is not UTF-8") from decode_error
+            raise ModelRequestError(
+                scrub(text=f"HTTP {exc.code}: {detail}", secret=self._api_key)
+            ) from exc
+        except urllib.error.URLError as exc:
+            raise ModelRequestError(f"generation lookup failed: {exc.reason}") from exc
+        try:
+            parsed = json.loads(raw_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise UntrackedCostError("generation response is not JSON") from exc
+        if not isinstance(parsed, dict):
+            raise UntrackedCostError("generation response is not an object")
+        return parsed
+
+    def _usage_from_generation(
+        self,
+        *,
+        generation_id: str,
+        base: dict[str, object],
+    ) -> dict[str, object]:
+        try:
+            payload = self._fetch_generation(generation_id=generation_id)
+            return usage_from_generation(payload=payload)
+        except (ModelRequestError, UntrackedCostError, UnexpectedModelOutputError) as exc:
+            self._ledger.mark_untracked(record=base)
+            self.usage_records.append(dict(base))
+            raise UntrackedCostError(
+                scrub(text=f"generation lookup failed: {exc}", secret=self._api_key)
+            ) from exc
+
     def _account(self, *, payload: Mapping[str, object], phase: str) -> None:
         usage = payload.get("usage")
         returned = payload.get("model")
@@ -584,9 +666,16 @@ class OpenRouterPlanner:
             "returned_model": returned if isinstance(returned, str) else None,
         }
         if not isinstance(usage, dict):
-            self._ledger.mark_untracked(record=base)
-            self.usage_records.append(dict(base))
-            raise UntrackedCostError("response has no usage object")
+            generation_id = payload.get("id")
+            if isinstance(generation_id, str) and generation_id != "":
+                usage = self._usage_from_generation(generation_id=generation_id, base=base)
+            else:
+                self._ledger.mark_untracked(record=base)
+                self.usage_records.append(dict(base))
+                raise UntrackedCostError(
+                    "response has no usage object; keys="
+                    + ",".join(sorted(str(key) for key in payload))
+                )
         try:
             cost, source = cost_from_usage(request_model=self._model, usage=usage)
         except UntrackedCostError:

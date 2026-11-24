@@ -268,6 +268,56 @@ def test_off_episode_stores_the_reflection_and_sends_no_fallback_field(tmp_path:
     assert "test-key" not in json.dumps(transport.bodies)
 
 
+def test_missing_usage_is_priced_from_the_generation_record(tmp_path: Path) -> None:
+    model = "anthropic/claude-opus-5.5"
+
+    class _Lookup(OpenRouterPlanner):
+        def _fetch_generation(self, *, generation_id: str) -> dict[str, object]:
+            assert generation_id == "gen-test"
+            return {
+                "data": {
+                    "native_tokens_reasoning": 1,
+                    "tokens_completion": 4,
+                    "tokens_prompt": 3,
+                    "total_cost": 0.2,
+                }
+            }
+
+    transport = _ScriptedTransport(
+        responses=(
+            {
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {"content": "done", "role": "assistant"},
+                    }
+                ],
+                "id": "gen-test",
+                "model": model,
+                "provider": "Anthropic",
+            },
+        )
+    )
+    planner = _Lookup(
+        api_key="test-key",
+        model=model,
+        transport=transport,
+        ledger=CostLedger(path=tmp_path / "ledger.json", stop_usd=9.0),
+        campaign_id="unit",
+        planning_max_tokens=1000,
+        reflection_max_tokens=1400,
+    )
+    planner.reset(
+        task=campaign_task_by_id(task_id="e4-utility"),
+        loaded_skills=(),
+        spotlight=False,
+    )
+    assert planner.next_call() is None
+    assert planner._ledger.spent_usd == pytest.approx(expected=0.2)
+    assert planner._ledger.can_start_campaign() is True
+    assert "temperature" not in transport.bodies[0]
+
+
 def test_parallel_tool_calls_run_in_order_before_the_next_model_turn(tmp_path: Path) -> None:
     model = "deepseek/deepseek-v4.1-flash-1017"
     transport = _ScriptedTransport(
