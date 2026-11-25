@@ -5,5 +5,5 @@
   <rect x="156" y="36" width="108" height="108" rx="8" fill="none" stroke="#e2b340" stroke-width="2"/>
   <text x="210" y="104" text-anchor="middle" fill="#e2b340" font-family="ui-sans-serif, system-ui, sans-serif" font-size="48">U</text>
   <text x="300" y="88" fill="#f8fafc" font-family="ui-sans-serif, system-ui, sans-serif" font-size="46">skill-taint</text>
-  <text x="300" y="126" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18">Unverified tool output, persistent agent notes</text>
+  <text x="300" y="126" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="18">Stored prompt injection for self-improving agents</text>
 </svg>
