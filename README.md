@@ -120,6 +120,14 @@ uv run python scripts/make_report.py
 
 That rewrites `docs/report.md`, `docs/figures/results_overview.png`, and `results/tables.md` from `results/summaries/` plus the raw reflection log, the ledger, and run metadata.
 
+Browse those committed summaries locally. This does not call a model. It needs Node.js 20 or newer:
+
+```bash
+make view
+```
+
+Then open http://127.0.0.1:8765. The page reads `results/summaries/` and shows stored skill text, T/U labels, and which skills later episodes loaded.
+
 A live grid is optional, billed, and separate from the tests. Copy the env example, set the key locally, and do not commit `.env`:
 
 ```bash
@@ -171,6 +179,8 @@ scripts/pilot.py
 scripts/run_grid.py
 scripts/run_record_grid.py
 scripts/make_report.py
+Makefile                   setup, tests, report, mock campaign, viewer
+viewer/                    browser for results/summaries
 tests/                     fake transport; no network
 docs/report.md
 docs/threat-model.md
