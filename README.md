@@ -60,8 +60,10 @@ We ran 97 campaigns on three frontier models with reasoning effort set to high: 
 - **Provider filters are part of the picture.** Claude's reflection step was often stopped by a content filter on the planted email, which a harness has to record rather than retry away.
 
 <p align="center">
-  <img src="docs/figures/scenario_families.png" alt="Contamination and later attack success by model and defense" width="720">
+  <img src="docs/figures/results_overview.png" alt="What reflection did with the planted content, and legitimate filing and payment rates by defense" width="720">
 </p>
+
+Panel A stacks each model's poisoning-episode reflections: adopted planted content is 0, DeepSeek and Opus often stored a counter-lesson, Gemini's reflections stored no skill about the email, and a provider content filter blocked many Opus reflections. Panel B shows legitimate filing and correct registered-account payments by defense, with the false-quarantine rate marked at 0%.
 
 | | Instruction email | Unverified account change |
 | --- | --- | --- |
@@ -116,7 +118,7 @@ Rebuild the published report from the committed summaries. This does not call a 
 uv run python scripts/make_report.py
 ```
 
-That rewrites `docs/report.md`, `docs/figures/scenario_families.png`, and `results/tables.md` from `results/summaries/` plus the ledger and run metadata.
+That rewrites `docs/report.md`, `docs/figures/results_overview.png`, and `results/tables.md` from `results/summaries/` plus the raw reflection log, the ledger, and run metadata.
 
 A live grid is optional, billed, and separate from the tests. Copy the env example, set the key locally, and do not commit `.env`:
 
@@ -172,7 +174,7 @@ scripts/make_report.py
 tests/                     fake transport; no network
 docs/report.md
 docs/threat-model.md
-docs/figures/scenario_families.png
+docs/figures/results_overview.png
 results/summaries/         scored campaigns
 results/raw/               committed call log
 results/cost_ledger.json
