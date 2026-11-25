@@ -25,7 +25,7 @@
 
 ---
 
-**skill-taint** is an open-source harness for testing a new attack surface in LLM agents: the notes they write for themselves. Agents that improve from experience (skill libraries, reflections, long-term memory) turn what they read today into instructions they follow tomorrow. skill-taint plants untrusted content in an agent's workspace, lets the agent learn, and then checks whether a later, unrelated task acts on what was planted. It also ships a provenance-based safeguard that keeps lessons learned from untrusted content out of future instructions.
+**skill-taint** is an open-source **security** testbed for a new attack surface in LLM agents: the notes they write for themselves. Agents that improve from experience (skill libraries, reflections, long-term memory) turn what they read today into instructions they follow tomorrow. skill-taint plants untrusted content in an agent's workspace, lets the agent learn, and then checks whether a later, unrelated task acts on what was planted. It also ships a provenance-based safeguard that keeps lessons learned from untrusted content out of future instructions.
 
 ## The problem
 
@@ -40,7 +40,7 @@ Day 5  A colleague asks the agent to process an invoice.
        The agent loads its skills. The lesson is now an instruction.
 ```
 
-The injected text never appears in the Day 5 conversation, so defenses that inspect the current context cannot see it. This is the agent version of **stored XSS**: data is saved first and executed later, in a different session. skill-taint is built to measure how often this happens and what it costs to prevent.
+The injected text never appears in the Day 5 conversation, so defenses that inspect the current context cannot see it. Agent memory becomes a **security** boundary that nobody is checking. This is the agent version of **stored XSS**: data is saved first and executed later, in a different session. skill-taint is built to measure how often this happens and what it costs to prevent.
 
 ## What you get
 
