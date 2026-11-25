@@ -62,9 +62,9 @@ CATEGORY_COLOR = {
     CONTENT_FILTER: "#e69f00",
     INCOMPLETE: "#cc79a7",
 }
-UTILITY_COLOR = "#0072b2"
-PAYMENT_COLOR = "#009e73"
-QUARANTINE_COLOR = "#d55e00"
+UTILITY_COLOR = "#465464"
+PAYMENT_COLOR = "#8ea0b0"
+QUARANTINE_COLOR = "#2c2c2c"
 INSTRUCTION_METRICS = (
     "benign_skill_loaded_e4",
     "benign_skill_stored",
@@ -296,18 +296,18 @@ def _overview_figure(*, summaries: list[dict[str, object]], path: Path) -> None:
     counts = count_reflection_categories(summaries=summaries)
     rates = legitimate_rates(summaries=summaries)
     with plt.rc_context(rc={"font.family": "DejaVu Sans", "axes.unicode_minus": False}):
-        figure = plt.figure(figsize=(8.7, 5.15))
+        figure = plt.figure(figsize=(8.8, 5.5))
         grid = figure.add_gridspec(
             nrows=2,
             ncols=2,
-            height_ratios=(4.15, 1.2),
-            width_ratios=(1.05, 1.0),
-            left=0.23,
+            height_ratios=(4.05, 1.55),
+            width_ratios=(1.0, 1.14),
+            left=0.21,
             right=0.985,
-            bottom=0.02,
-            top=0.91,
-            hspace=0.42,
-            wspace=0.34,
+            bottom=0.04,
+            top=0.86,
+            hspace=0.48,
+            wspace=0.30,
         )
         axis_a = figure.add_subplot(grid[0, 0])
         axis_b = figure.add_subplot(grid[0, 1])
@@ -317,6 +317,7 @@ def _overview_figure(*, summaries: list[dict[str, object]], path: Path) -> None:
         _panel_legitimate(axis=axis_b, rates=rates)
         _legend_reflection(axis=legend_a, counts=counts)
         _legend_legitimate(axis=legend_b, rates=rates)
+        _require_overview_layout(figure=figure)
         figure.savefig(path, dpi=160, facecolor="white")
         plt.close(figure)
 
@@ -434,8 +435,8 @@ def _panel_legitimate(
     rates: list[dict[str, int | str]],
 ) -> None:
     positions = list(range(len(rates)))
-    width = 0.32
-    gap = 0.08
+    width = 0.28
+    gap = 0.20
     utility_x = [item - (width + gap) / 2 for item in positions]
     payment_x = [item + (width + gap) / 2 for item in positions]
     utility = [
@@ -497,7 +498,8 @@ def _panel_legitimate(
         ticks=positions,
         labels=[_defense_tick(row=row) for row in rates],
     )
-    axis.set_ylim(bottom=0, top=108)
+    axis.set_xlim(left=-0.55, right=2.55)
+    axis.set_ylim(bottom=0, top=122)
     axis.set_yticks(ticks=(0, 25, 50, 75, 100))
     axis.set_ylabel(ylabel="Success rate (%)", fontsize=10)
     axis.set_xlabel(xlabel="Defense", fontsize=10)
@@ -523,26 +525,66 @@ def _annotate_bars(
         )
 
 
+def _require_overview_layout(*, figure: matplotlib.figure.Figure) -> None:
+    """Raise when a title, legend, or panel-B count label is clipped or overlapping."""
+    figure.canvas.draw()
+    renderer = figure.canvas.get_renderer()
+    frame = figure.bbox
+    for axis in figure.axes:
+        title = axis.title
+        if title.get_text() != "":
+            _require_inside_figure(
+                frame=frame,
+                box=title.get_window_extent(renderer=renderer),
+                name=f"title {title.get_text()!r}",
+            )
+        legend = axis.get_legend()
+        if legend is not None:
+            _require_inside_figure(
+                frame=frame,
+                box=legend.get_window_extent(renderer=renderer),
+                name="legend",
+            )
+    fractions: list[tuple[str, matplotlib.transforms.Bbox]] = []
+    for axis in figure.axes:
+        for text in axis.texts:
+            label = text.get_text()
+            if "/" not in label:
+                continue
+            box = text.get_window_extent(renderer=renderer)
+            _require_inside_figure(frame=frame, box=box, name=f"count {label}")
+            fractions.append((label, box))
+    for index, (label, box) in enumerate(fractions):
+        for other_label, other in fractions[index + 1 :]:
+            if not box.overlaps(other=other):
+                continue
+            shared = type(box).intersection(bbox1=box, bbox2=other)
+            if shared is None:
+                continue
+            if shared.width > 0.6 and shared.height > 0.6:
+                raise EvaluationError(f"count labels overlap: {label} and {other_label}")
+
+
+def _require_inside_figure(
+    *,
+    frame: matplotlib.transforms.Bbox,
+    box: matplotlib.transforms.Bbox,
+    name: str,
+) -> None:
+    if box.x0 < frame.x0 - 0.5 or box.y0 < frame.y0 - 0.5:
+        raise EvaluationError(f"{name} is clipped")
+    if box.x1 > frame.x1 + 0.5 or box.y1 > frame.y1 + 0.5:
+        raise EvaluationError(f"{name} is clipped")
+
+
 def _bar_fraction(*, axis: matplotlib.axes.Axes, x: float, height: float, label: str) -> None:
-    if height >= 22:
-        axis.text(
-            x=x,
-            y=height / 2,
-            s=label,
-            ha="center",
-            va="center",
-            fontsize=8.5,
-            color="white",
-            zorder=3,
-        )
-        return
     axis.text(
         x=x,
-        y=height + 1.8,
+        y=height + 1.4,
         s=label,
         ha="center",
         va="bottom",
-        fontsize=8.5,
+        fontsize=8,
         color="#1a1a1a",
         zorder=3,
     )
