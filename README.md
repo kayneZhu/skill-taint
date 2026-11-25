@@ -258,8 +258,6 @@ The two-point integrity order used here is the one stated by FIDES. The scripted
 }
 ```
 
-GitHub can also render [CITATION.cff](CITATION.cff).
-
 ## License
 
 [MIT](LICENSE) © 2026 Yukang Zhu.
