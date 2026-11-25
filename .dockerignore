@@ -1,0 +1,14 @@
+.git
+.venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+**/__pycache__
+**/*.pyc
+viewer/node_modules
+viewer/dist
+runs
+results/libraries
+results/last_error.txt
+.env
+**/.DS_Store
