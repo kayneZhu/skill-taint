@@ -27,6 +27,10 @@ runs/
 .env.*
 !.env.example
 
+# Campaign viewer. Source lives in viewer/src; tsc writes viewer/dist.
+viewer/node_modules/
+viewer/dist/
+
 # Local artifacts from paid runs.
 # results/summaries/, results/raw/, and results/*.json are the published
 # measurement. Those traces are small and stay tracked. results/raw/ is the
