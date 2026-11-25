@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "tsc -p tsconfig.json && node --test dist"
+    "test": "tsc -p tsconfig.json && node --test dist && node check.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
